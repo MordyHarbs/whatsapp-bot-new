@@ -22,8 +22,8 @@ WHATSAPP_PHONE_NUMBER_ID = "525298894008965"
 WHATSAPP_ACCESS_TOKEN = "EAASmeEcmWYcBOwdFgWh0wVWth5jiFHAK15UIqDlhcrEIlLOMBOUzx5VqB4xSPf6uNX7ZAulBA9lIOYUCg3BFvSPSLiUzZBfZA2M8CZAtAsJFpPnpacWwZCB4p2GzrbIryjPCz8Nhlb1xaFOG6G6FtfakCxuFyWjB5EUm1xN2JdMImZBGOFiX5iQEGhB2wbU81URiJImSSC0DI4ZASabg4ahAhmcG0ixHOevv01ZBbeA56PRabWAExt4ZD"
 VERIFY_TOKEN = "my_custom_token"
 
-# Track user input state
-user_state = {}
+# Track last search results for users
+user_car_codes = {}
 
 @app.route('/webhook', methods=['GET'])
 def verify():
@@ -50,23 +50,25 @@ def receive_message():
                 msg = value["messages"][0]
                 sender = msg["from"]
 
-                # If user selected a menu option
-                if "interactive" in msg:
+                if "text" in msg:
+                    car_number = msg["text"]["body"].strip()
+                    car_code = get_car_code(car_number)
+
+                    if car_code:
+                        # Store car code and send menu
+                        user_car_codes[sender] = car_code
+                        send_menu(sender)
+                    else:
+                        send_message(sender, "רכב זה לא נמצא")
+
+                elif "interactive" in msg:
                     selection = msg["interactive"]["button_reply"]["id"]
                     
-                    if selection == "get_car_code":
-                        send_message(sender, "אנא הזן מספר רכב")  # Ask for car number
-                        user_state[sender] = "waiting_for_car_number"
-
-                # If user is in input state, get car code from Google Sheets
-                elif sender in user_state and user_state[sender] == "waiting_for_car_number":
-                    car_number = msg.get("text", {}).get("body", "").strip()
-                    car_code = get_car_code(car_number)  # Fetch car code from Google Sheets
-                    send_message(sender, car_code)
-                    del user_state[sender]  # Remove user from tracking after response
-
-                else:
-                    send_menu(sender)  # Default: Show menu
+                    if selection == "get_car_code" and sender in user_car_codes:
+                        send_message(sender, user_car_codes[sender])
+                        del user_car_codes[sender]  # Remove after sending
+                    elif selection == "option_2":
+                        pass  # Do nothing for now
 
     return jsonify({"status": "received"}), 200
 
@@ -83,11 +85,11 @@ def send_menu(recipient):
         "type": "interactive",
         "interactive": {
             "type": "button",
-            "body": {"text": "נא לבחור אפשרות:"},
+            "body": {"text": "הרכב נמצא! נא לבחור אפשרות:"},
             "action": {
                 "buttons": [
                     {"type": "reply", "reply": {"id": "get_car_code", "title": "קוד לרכב"}},
-                    {"type": "reply", "reply": {"id": "option_2", "title": "Option 2"}}
+                    {"type": "reply", "reply": {"id": "option_2", "title": "אפשרות 2"}}
                 ]
             }
         }
@@ -101,19 +103,14 @@ def get_car_code(car_number):
     records = cars_sheet.get_all_values()  # Fetch all rows as raw values (not dictionary)
     
     print(f"Searching for car number: {car_number}")  # Debugging log
-    print("Google Sheets Data:", records)  # Print all records
     
-    # Iterate over each row, skipping the header (assuming row 1 is the header)
     for row in records[1:]:
         if len(row) >= 4 and row[3].strip() == car_number:  # Column D (4th column)
             if len(row) >= 7 and row[6].strip():  # Column G (7th column) is not empty
                 return f"*הקוד הוא:* {row[6].strip()}"
-                print("Final message:", car_code)  # <---- Add this here
-            else:
-                return "לא נמצא קוד לרכב זה"
-
-    return "רכב זה לא נמצא"  # Return if not found
     
+    return None  # Return None if not found
+
 def send_message(recipient, text):
     """Sends a WhatsApp text message"""
     url = f"https://graph.facebook.com/v17.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
