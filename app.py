@@ -3,12 +3,12 @@ import os
 import requests
 import gspread
 from google.oauth2.service_account import Credentials
+import json
 
 app = Flask(__name__)
 
 # Load Google Sheets credentials
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-import json
 creds_json = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
 creds = Credentials.from_service_account_info(creds_json, scopes=SCOPES)
 client = gspread.authorize(creds)
@@ -59,16 +59,28 @@ def receive_message():
                         user_car_codes[sender] = car_code
                         send_menu(sender)
                     else:
-                        send_message(sender, "רכב זה לא נמצא")
+                        # If the car is not found, send the default menu
+                        send_default_menu(sender)
 
                 elif "interactive" in msg:
-                    selection = msg["interactive"]["button_reply"]["id"]
-                    
-                    if selection == "get_car_code" and sender in user_car_codes:
-                        send_message(sender, user_car_codes[sender])
-                        del user_car_codes[sender]  # Remove after sending
-                    elif selection == "option_2":
-                        pass  # Do nothing for now
+                    if "list_reply" in msg["interactive"]:  # Handling list selection
+                        selected_car_number = msg["interactive"]["list_reply"]["id"]
+                        car_code = get_car_code(selected_car_number)
+
+                        if car_code:
+                            user_car_codes[sender] = car_code
+                            send_menu(sender)
+                        else:
+                            send_message(sender, "רכב זה לא נמצא, נא לנסות שוב")
+
+                    elif "button_reply" in msg["interactive"]:
+                        selection = msg["interactive"]["button_reply"]["id"]
+
+                        if selection == "get_car_code" and sender in user_car_codes:
+                            send_message(sender, user_car_codes[sender])
+                            del user_car_codes[sender]  # Remove after sending
+                        elif selection == "option_2":
+                            pass  # Do nothing for now
 
     return jsonify({"status": "received"}), 200
 
@@ -97,6 +109,52 @@ def send_menu(recipient):
 
     response = requests.post(url, headers=headers, json=data)
     print("Menu Sent:", response.json())  # Debugging log
+
+def send_default_menu(recipient):
+    """Sends a default list menu with available cars."""
+    url = f"https://graph.facebook.com/v17.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
+    headers = {
+        "Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}",
+        "Content-Type": "application/json"
+    }
+
+    records = cars_sheet.get_all_values()[1:]  # Skip headers
+    options = []
+
+    for row in records:
+        if len(row) >= 12 and row[11].strip().lower() == "false":  # Column L (12th column) is "FALSE"
+            if len(row) >= 4 and row[1].strip() and row[3].strip():  # Ensure model and car number exist
+                options.append({
+                    "id": row[3].strip(),  # Car number as ID
+                    "title": row[1].strip(),  # Model name
+                    "description": row[3].strip()  # Car number
+                })
+
+    if not options:
+        send_message(recipient, "אין רכבים זמינים כרגע.")
+        return
+
+    data = {
+        "messaging_product": "whatsapp",
+        "to": recipient,
+        "type": "interactive",
+        "interactive": {
+            "type": "list",
+            "body": {"text": "רכב זה לא נמצא, אנא בחר רכב:"},
+            "action": {
+                "button": "בחר רכב",
+                "sections": [
+                    {
+                        "title": "רכבים זמינים",
+                        "rows": options[:10]  # Limit to 10 (WhatsApp restriction)
+                    }
+                ]
+            }
+        }
+    }
+
+    response = requests.post(url, headers=headers, json=data)
+    print("Default Menu Sent:", response.json())  # Debugging log
 
 def get_car_code(car_number):
     """Fetches car code from Google Sheets based on the provided car number (4th column)"""
