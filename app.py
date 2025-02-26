@@ -62,7 +62,7 @@ def receive_message():
                 elif sender in user_state and user_state[sender] == "waiting_for_car_number":
                     car_number = msg.get("text", {}).get("body", "").strip()
                     car_code = get_car_code(car_number)  # Fetch car code from Google Sheets
-                    send_message(sender, {car_code})
+                    send_message(sender, car_code)
                     del user_state[sender]  # Remove user from tracking after response
 
                 else:
