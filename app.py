@@ -71,7 +71,7 @@ def receive_message():
     return jsonify({"status": "received"}), 200
 
 def send_menu(recipient):
-    """Sends a menu with two options."""
+    """Sends a button-based menu (instant selection)."""
     url = f"https://graph.facebook.com/v17.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
     headers = {
         "Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}",
@@ -82,18 +82,12 @@ def send_menu(recipient):
         "to": recipient,
         "type": "interactive",
         "interactive": {
-            "type": "list",
+            "type": "button",
             "body": {"text": "נא לבחור אפשרות:"},
             "action": {
-                "button": "בחר אפשרות",
-                "sections": [
-                    {
-                        "title": "אפשרויות",
-                        "rows": [
-                            {"id": "get_car_code", "title": "קוד לרכב", "description": "."},
-                            {"id": "option_2", "title": "Option 2", "description": "Select this for Option 2"}
-                        ]
-                    }
+                "buttons": [
+                    {"type": "reply", "reply": {"id": "get_car_code", "title": "קוד לרכב"}},
+                    {"type": "reply", "reply": {"id": "option_2", "title": "Option 2"}}
                 ]
             }
         }
@@ -101,7 +95,7 @@ def send_menu(recipient):
 
     response = requests.post(url, headers=headers, json=data)
     print("Menu Sent:", response.json())  # Debugging log
-
+    
 def get_car_code(car_number):
     """Fetches car code from Google Sheets based on the provided car number (4th column)"""
     records = cars_sheet.get_all_values()  # Fetch all rows as raw values (not dictionary)
