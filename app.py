@@ -90,7 +90,7 @@ def send_menu(recipient):
                     {
                         "title": "אפשרויות",
                         "rows": [
-                            {"id": "get_car_code", "title": "קוד לרכב", "description": "אנא המתן"},
+                            {"id": "get_car_code", "title": "קוד לרכב", "description": "."},
                             {"id": "option_2", "title": "Option 2", "description": "Select this for Option 2"}
                         ]
                     }
@@ -114,6 +114,7 @@ def get_car_code(car_number):
         if len(row) >= 4 and row[3].strip() == car_number:  # Column D (4th column)
             if len(row) >= 7 and row[6].strip():  # Column G (7th column) is not empty
                 return f"*הקוד הוא:* {row[6].strip()}"
+                print("Final message:", car_code)  # <---- Add this here
             else:
                 return "לא נמצא קוד לרכב זה"
 
