@@ -120,22 +120,23 @@ def send_default_menu(recipient):
 
     records = cars_sheet.get_all_values()[1:]  # Skip headers
     categories = {}
-    total_rows = 0  # Track the total number of rows added
+    total_rows = 0  # Track total row count across all sections
 
     for row in records:
-        if len(row) >= 12 and row[11].strip().lower() == "false":  # Column L is "FALSE"
+        if len(row) >= 12 and row[11].strip().lower() == "false":  # Column L must be "FALSE"
             if len(row) >= 9 and row[1].strip() and row[3].strip():  # Ensure model and car number exist
                 category = row[8].strip() if len(row) >= 9 and row[8].strip() else "אחר"  # Column I (category)
+                
                 if category not in categories:
                     categories[category] = []
 
-                if total_rows < 100:  # Ensure we don't exceed 100 total rows
+                if total_rows < 100:  # Ensure we do not exceed 100 total rows
                     categories[category].append({
                         "id": row[3].strip(),  # Car number as ID
                         "title": row[1].strip(),  # Model name
                         "description": row[3].strip()  # Car number
                     })
-                    total_rows += 1  # Increment row count
+                    total_rows += 1  # Increment the total row count
 
     if not categories:
         send_message(recipient, "אין רכבים זמינים כרגע.")
@@ -145,9 +146,9 @@ def send_default_menu(recipient):
     for category, rows in categories.items():
         sections.append({
             "title": category,
-            "rows": rows[:10]  # Ensure max 10 rows per section
+            "rows": rows[:10]  # Limit each section to 10 rows
         })
-        if len(sections) == 10:  # Stop if 10 sections reached
+        if len(sections) == 10:  # Stop if we reach the max 10 sections
             break
 
     data = {
@@ -166,7 +167,7 @@ def send_default_menu(recipient):
 
     response = requests.post(url, headers=headers, json=data)
     print("Default Menu Sent:", response.json())  # Debugging log
-        
+            
 def get_car_code(car_number):
     """Fetches car code from Google Sheets based on the provided car number (4th column)"""
     records = cars_sheet.get_all_values()  # Fetch all rows as raw values (not dictionary)
