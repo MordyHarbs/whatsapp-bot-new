@@ -52,10 +52,11 @@ def receive_message():
 
                 if "text" in msg:
                     car_number = msg["text"]["body"].strip()
-                    car_code = get_car_code(car_number)
+                    car_info = get_car_info(car_number)
 
-                    if car_code:
-                        send_message(sender, car_code)
+                    if car_info:
+                        car_model, car_code = car_info
+                        send_car_options_menu(sender, car_number, car_model)  # Send button menu
                     else:
                         send_category_menu(sender)
 
@@ -70,18 +71,24 @@ def receive_message():
 
                         elif selected_id.startswith("car_"):
                             car_number = selected_id.replace("car_", "")
-                            car_code = get_car_code(car_number)
+                            car_info = get_car_info(car_number)
 
-                            if car_code:
-                                send_message(sender, car_code)
+                            if car_info:
+                                car_model, car_code = car_info
+                                send_car_options_menu(sender, car_number, car_model)  # Send button menu
                             else:
                                 send_message(sender, "רכב זה לא נמצא, נא לנסות שוב")
 
                     elif "button_reply" in msg["interactive"]:
                         selection = msg["interactive"]["button_reply"]["id"]
 
-                        if selection == "get_car_code":
-                            send_message(sender, "בחרת בקשת קוד לרכב, אך לא סופק מספר רכב.")
+                        if selection.startswith("get_code_"):
+                            car_number = selection.replace("get_code_", "")
+                            car_code = get_car_code(car_number)
+                            if car_code:
+                                send_message(sender, car_code)
+                            else:
+                                send_message(sender, "לא נמצא קוד לרכב זה.")
 
     return jsonify({"status": "received"}), 200
 
@@ -167,21 +174,8 @@ def send_car_menu(recipient, category):
     response = requests.post(url, headers=headers, json=data)
     print("Car Menu Sent:", response.json())
 
-def get_car_code(car_number):
-    """Fetches car code from Google Sheets."""
-    records = cars_sheet.get_all_values()
-
-    print(f"Searching for car number: {car_number}")  # Debugging log
-
-    for row in records[1:]:
-        if len(row) >= 4 and row[3].strip() == car_number:  # Column D (Car number)
-            if len(row) >= 7 and row[6].strip():  # Column G (Car code)
-                return f"*הקוד הוא:* {row[6].strip()}"
-
-    return None
-
-def send_message(recipient, text):
-    """Sends a simple WhatsApp text message."""
+def send_car_options_menu(recipient, car_number, car_model):
+    """Sends a button menu with car options."""
     url = f"https://graph.facebook.com/v17.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
     headers = {
         "Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}",
@@ -190,13 +184,58 @@ def send_message(recipient, text):
     data = {
         "messaging_product": "whatsapp",
         "to": recipient,
-        "type": "text",
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "body": {"text": f"נמצא רכב: {car_model}\nבחר אפשרות:"},
+            "action": {
+                "buttons": [
+                    {"type": "reply", "id": f"get_code_{car_number}", "title": "קוד לרכב"},
+                    {"type": "reply", "id": "option_2", "title": "אפשרות 2"}
+                ]
+            }
+        }
+    }
+    response = requests.post(url, headers=headers, json=data)
+    print("Car Options Menu Sent:", response.json())
+
+def send_message(recipient, text):
+    """Sends a plain text message to the recipient."""
+    url = f"https://graph.facebook.com/v17.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
+    headers = {
+        "Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "messaging_product": "whatsapp",
+        "to": recipient,
         "text": {"body": text}
     }
-
     response = requests.post(url, headers=headers, json=data)
     print("Message Sent:", response.json())
 
+
+def get_car_info(car_number):
+    """Fetches car model and code from Google Sheets."""
+    records = cars_sheet.get_all_values()
+    for row in records[1:]:
+        if len(row) >= 4 and row[3].strip() == car_number:
+            return row[1].strip(), row[6].strip() if len(row) >= 7 else None
+    return None
+
+def get_car_code(car_number):
+    """Fetches the car code from Google Sheets."""
+    records = cars_sheet.get_all_values()
+
+    print(f"Searching for car number: {car_number}")  # Debugging log
+
+    for row in records[1:]:  # Skip headers
+        if len(row) >= 4 and row[3].strip() == car_number:  # Column D (Car number)
+            if len(row) >= 7 and row[6].strip():  # Column G (Car code)
+                return f"*הקוד הוא:* {row[6].strip()}"  # Formatting the response with bold "הקוד הוא"
+
+    return None  # Return None if not found
+    
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))  # Ensure it matches Render's assigned port
+    port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
