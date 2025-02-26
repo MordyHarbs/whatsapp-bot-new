@@ -15,15 +15,15 @@ client = gspread.authorize(creds)
 
 # Google Sheets info
 SHEET_ID = "1aE6ZDZ8W1qozc985MDMJLilLFGYDEHRyAhZnBeA_gWM"
-cars_sheet = client.open_by_key(SHEET_ID).worksheet("cars")  # Open "cars" sheet
+cars_sheet = client.open_by_key(SHEET_ID).worksheet("cars")
 
 # WhatsApp API Details
 WHATSAPP_PHONE_NUMBER_ID = "525298894008965"
-WHATSAPP_ACCESS_TOKEN = "EAASmeEcmWYcBOzeSVfNZBv0KqYBHCVzZAvwdTV8mO8ZACReuwiBj1gTXxRUlXmFTWHvPqm4GlfTcl2nSZAJ6332CGHZArIyCEvO8qeP1aNXKJRUoZAyhpATRGpj5PBjDCWS9MNYbwqFNdJ2UPmheS1n7fWuJQZCQsx5pJZABFKHpN6JtujZBt7md5Bo6YZC1XWDlorJ3RBLv59pNhNKZCmtqhCjegmkonys0ORZCAKQqpg5DpHfRU9QnndkZD"
+WHATSAPP_ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN")
 VERIFY_TOKEN = "my_custom_token"
 
-# Track last search results for users
-user_car_codes = {}
+# Track user selections
+user_category_selection = {}
 
 @app.route('/webhook', methods=['GET'])
 def verify():
@@ -55,63 +55,38 @@ def receive_message():
                     car_code = get_car_code(car_number)
 
                     if car_code:
-                        # Store car code and send menu
-                        user_car_codes[sender] = car_code
                         send_menu(sender)
                     else:
-                        # If the car is not found, send the default menu
-                        send_default_menu(sender)
+                        send_category_menu(sender)
 
                 elif "interactive" in msg:
-                    if "list_reply" in msg["interactive"]:  # Handling list selection
-                        selected_car_number = msg["interactive"]["list_reply"]["id"]
-                        car_code = get_car_code(selected_car_number)
+                    if "list_reply" in msg["interactive"]:
+                        selected_id = msg["interactive"]["list_reply"]["id"]
 
-                        if car_code:
-                            user_car_codes[sender] = car_code
-                            send_menu(sender)
-                        else:
-                            send_message(sender, "רכב זה לא נמצא, נא לנסות שוב")
+                        if selected_id.startswith("category_"):
+                            category_name = selected_id.replace("category_", "")
+                            user_category_selection[sender] = category_name
+                            send_car_menu(sender, category_name)
+
+                        elif selected_id.startswith("car_"):
+                            car_number = selected_id.replace("car_", "")
+                            car_code = get_car_code(car_number)
+
+                            if car_code:
+                                send_message(sender, car_code)
+                            else:
+                                send_message(sender, "רכב זה לא נמצא, נא לנסות שוב")
 
                     elif "button_reply" in msg["interactive"]:
                         selection = msg["interactive"]["button_reply"]["id"]
 
-                        if selection == "get_car_code" and sender in user_car_codes:
-                            send_message(sender, user_car_codes[sender])
-                            del user_car_codes[sender]  # Remove after sending
-                        elif selection == "option_2":
-                            pass  # Do nothing for now
+                        if selection == "get_car_code":
+                            send_message(sender, "בחרת בקשת קוד לרכב, אך לא סופק מספר רכב.")
 
     return jsonify({"status": "received"}), 200
 
-def send_menu(recipient):
-    """Sends a button-based menu (instant selection)."""
-    url = f"https://graph.facebook.com/v17.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
-    headers = {
-        "Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}",
-        "Content-Type": "application/json"
-    }
-    data = {
-        "messaging_product": "whatsapp",
-        "to": recipient,
-        "type": "interactive",
-        "interactive": {
-            "type": "button",
-            "body": {"text": "הרכב נמצא! נא לבחור אפשרות:"},
-            "action": {
-                "buttons": [
-                    {"type": "reply", "reply": {"id": "get_car_code", "title": "קוד לרכב"}},
-                    {"type": "reply", "reply": {"id": "option_2", "title": "אפשרות 2"}}
-                ]
-            }
-        }
-    }
-
-    response = requests.post(url, headers=headers, json=data)
-    print("Menu Sent:", response.json())  # Debugging log
-
-def send_default_menu(recipient):
-    """Sends a default list menu with available cars, grouped by category (Column I)."""
+def send_category_menu(recipient):
+    """Sends a list of available categories (Step 1)."""
     url = f"https://graph.facebook.com/v17.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
     headers = {
         "Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}",
@@ -119,37 +94,19 @@ def send_default_menu(recipient):
     }
 
     records = cars_sheet.get_all_values()[1:]  # Skip headers
-    categories = {}
-    total_rows = 0  # Track total row count across all sections
+    categories = set()
 
     for row in records:
         if len(row) >= 12 and row[11].strip().lower() == "false":  # Column L must be "FALSE"
-            if len(row) >= 9 and row[1].strip() and row[3].strip():  # Ensure model and car number exist
-                category = row[8].strip() if len(row) >= 9 and row[8].strip() else "אחר"  # Column I (category)
-                
-                if category not in categories:
-                    categories[category] = []
+            if len(row) >= 9 and row[8].strip():  # Column I (Category)
+                categories.add(row[8].strip())
 
-                if total_rows < 100:  # Ensure we do not exceed 100 total rows
-                    categories[category].append({
-                        "id": row[3].strip(),  # Car number as ID
-                        "title": row[1].strip(),  # Model name
-                        "description": row[3].strip()  # Car number
-                    })
-                    total_rows += 1  # Increment the total row count
-
+    categories = list(categories)[:10]  # Limit to 10 categories
     if not categories:
-        send_message(recipient, "אין רכבים זמינים כרגע.")
+        send_message(recipient, "אין קטגוריות זמינות כרגע.")
         return
 
-    sections = []
-    for category, rows in categories.items():
-        sections.append({
-            "title": category,
-            "rows": rows[:10]  # Limit each section to 10 rows
-        })
-        if len(sections) == 10:  # Stop if we reach the max 10 sections
-            break
+    rows = [{"id": f"category_{category}", "title": category} for category in categories]
 
     data = {
         "messaging_product": "whatsapp",
@@ -157,32 +114,74 @@ def send_default_menu(recipient):
         "type": "interactive",
         "interactive": {
             "type": "list",
-            "body": {"text": "רכב זה לא נמצא, אנא בחר רכב:"},
+            "body": {"text": "רכב זה לא נמצא, אנא בחר קטגוריה:"},
             "action": {
-                "button": "בחר רכב",
-                "sections": sections
+                "button": "בחר קטגוריה",
+                "sections": [{"title": "קטגוריות זמינות", "rows": rows}]
             }
         }
     }
 
     response = requests.post(url, headers=headers, json=data)
-    print("Default Menu Sent:", response.json())  # Debugging log
-            
+    print("Category Menu Sent:", response.json())
+
+def send_car_menu(recipient, category):
+    """Sends a list of cars from the selected category (Step 2)."""
+    url = f"https://graph.facebook.com/v17.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
+    headers = {
+        "Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}",
+        "Content-Type": "application/json"
+    }
+
+    records = cars_sheet.get_all_values()[1:]
+    car_list = []
+
+    for row in records:
+        if len(row) >= 12 and row[11].strip().lower() == "false":  # Column L must be "FALSE"
+            if len(row) >= 9 and row[8].strip() == category and row[1].strip() and row[3].strip():
+                car_list.append({
+                    "id": f"car_{row[3].strip()}",  # Car number as ID
+                    "title": row[1].strip(),  # Model name
+                    "description": row[3].strip()  # Car number
+                })
+
+    car_list = car_list[:10]  # Limit to 10 cars
+    if not car_list:
+        send_message(recipient, f"אין רכבים זמינים בקטגוריה {category}.")
+        return
+
+    data = {
+        "messaging_product": "whatsapp",
+        "to": recipient,
+        "type": "interactive",
+        "interactive": {
+            "type": "list",
+            "body": {"text": f"רשימת רכבים בקטגוריה {category}:"},
+            "action": {
+                "button": "בחר רכב",
+                "sections": [{"title": "רכבים זמינים", "rows": car_list}]
+            }
+        }
+    }
+
+    response = requests.post(url, headers=headers, json=data)
+    print("Car Menu Sent:", response.json())
+
 def get_car_code(car_number):
-    """Fetches car code from Google Sheets based on the provided car number (4th column)"""
-    records = cars_sheet.get_all_values()  # Fetch all rows as raw values (not dictionary)
-    
+    """Fetches car code from Google Sheets."""
+    records = cars_sheet.get_all_values()
+
     print(f"Searching for car number: {car_number}")  # Debugging log
-    
+
     for row in records[1:]:
-        if len(row) >= 4 and row[3].strip() == car_number:  # Column D (4th column)
-            if len(row) >= 7 and row[6].strip():  # Column G (7th column) is not empty
+        if len(row) >= 4 and row[3].strip() == car_number:  # Column D (Car number)
+            if len(row) >= 7 and row[6].strip():  # Column G (Car code)
                 return f"*הקוד הוא:* {row[6].strip()}"
-    
-    return None  # Return None if not found
+
+    return None
 
 def send_message(recipient, text):
-    """Sends a WhatsApp text message"""
+    """Sends a simple WhatsApp text message."""
     url = f"https://graph.facebook.com/v17.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
     headers = {
         "Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}",
@@ -194,9 +193,9 @@ def send_message(recipient, text):
         "type": "text",
         "text": {"body": text}
     }
-    
+
     response = requests.post(url, headers=headers, json=data)
-    print("Message Sent:", response.json())  # Debugging log
+    print("Message Sent:", response.json())
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))  # Ensure it matches Render's assigned port
