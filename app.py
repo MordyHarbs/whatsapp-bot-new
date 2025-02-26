@@ -181,6 +181,7 @@ def send_car_options_menu(recipient, car_number, car_model):
         "Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}",
         "Content-Type": "application/json"
     }
+
     data = {
         "messaging_product": "whatsapp",
         "to": recipient,
@@ -190,15 +191,16 @@ def send_car_options_menu(recipient, car_number, car_model):
             "body": {"text": f"נמצא רכב: {car_model}\nבחר אפשרות:"},
             "action": {
                 "buttons": [
-                    {"type": "reply", "id": f"get_code_{car_number}", "title": "קוד לרכב"},
-                    {"type": "reply", "id": "option_2", "title": "אפשרות 2"}
+                    {"type": "reply", "reply": {"id": f"get_code_{car_number}", "title": "קוד לרכב"}},
+                    {"type": "reply", "reply": {"id": "option_2", "title": "אפשרות 2"}}
                 ]
             }
         }
     }
+
     response = requests.post(url, headers=headers, json=data)
     print("Car Options Menu Sent:", response.json())
-
+    
 def send_message(recipient, text):
     """Sends a plain text message to the recipient."""
     url = f"https://graph.facebook.com/v17.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
