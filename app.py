@@ -52,7 +52,7 @@ def receive_message():
 
                 # If user selected a menu option
                 if "interactive" in msg:
-                    selection = msg["interactive"]["list_reply"]["id"]
+                    selection = msg["interactive"]["button_reply"]["id"]
                     
                     if selection == "get_car_code":
                         send_message(sender, "אנא הזן מספר רכב")  # Ask for car number
@@ -95,7 +95,7 @@ def send_menu(recipient):
 
     response = requests.post(url, headers=headers, json=data)
     print("Menu Sent:", response.json())  # Debugging log
-    
+
 def get_car_code(car_number):
     """Fetches car code from Google Sheets based on the provided car number (4th column)"""
     records = cars_sheet.get_all_values()  # Fetch all rows as raw values (not dictionary)
