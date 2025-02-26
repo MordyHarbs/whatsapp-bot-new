@@ -55,7 +55,7 @@ def receive_message():
                     car_code = get_car_code(car_number)
 
                     if car_code:
-                        send_menu(sender)
+                        send_message(sender, car_code)
                     else:
                         send_category_menu(sender)
 
