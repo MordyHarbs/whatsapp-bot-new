@@ -19,7 +19,7 @@ cars_sheet = client.open_by_key(SHEET_ID).worksheet("cars")
 
 # WhatsApp API Details
 WHATSAPP_PHONE_NUMBER_ID = "525298894008965"
-WHATSAPP_ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN")
+WHATSAPP_ACCESS_TOKEN = "EAASmeEcmWYcBO4mBbFeiJ7d0a5CrFFS2s58DwrkcVF0IxlAyAfjYfoBDgHfbZAQTPARJZCuvydE9Kzs2xBh7ia8ZBDa7YgkfTlbqBenVcXKmpZBrkxDmMkKPj8t2rDa6LSDcJQyCw70KgoxBpDE5HyRjMzgHlxeNnZC5xYekh4yRcCcvpZCtcQYeMDH7VH26Ljzz9XZA1pYQbsTlrsVBaf08DyTowRnVvAvAOt2KSgkuLJ3tTCkBzMZD"
 VERIFY_TOKEN = "my_custom_token"
 
 # Track user selections
