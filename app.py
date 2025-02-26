@@ -111,7 +111,7 @@ def send_menu(recipient):
     print("Menu Sent:", response.json())  # Debugging log
 
 def send_default_menu(recipient):
-    """Sends a default list menu with available cars."""
+    """Sends a default list menu with available cars, grouped by category (Column I)."""
     url = f"https://graph.facebook.com/v17.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
     headers = {
         "Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}",
@@ -119,20 +119,34 @@ def send_default_menu(recipient):
     }
 
     records = cars_sheet.get_all_values()[1:]  # Skip headers
-    options = []
+    categories = {}
 
     for row in records:
-        if len(row) >= 12 and row[11].strip().lower() == "false":  # Column L (12th column) is "FALSE"
-            if len(row) >= 4 and row[1].strip() and row[3].strip():  # Ensure model and car number exist
-                options.append({
+        if len(row) >= 12 and row[11].strip().lower() == "false":  # Column L is "FALSE"
+            if len(row) >= 9 and row[1].strip() and row[3].strip():  # Ensure model and car number exist
+                category = row[8].strip() if len(row) >= 9 and row[8].strip() else "אחר"  # Column I (category), default to "אחר" if empty
+                if category not in categories:
+                    categories[category] = []
+
+                categories[category].append({
                     "id": row[3].strip(),  # Car number as ID
                     "title": row[1].strip(),  # Model name
                     "description": row[3].strip()  # Car number
                 })
 
-    if not options:
+    if not categories:
         send_message(recipient, "אין רכבים זמינים כרגע.")
         return
+
+    # Convert categories to WhatsApp sections (max 10 sections)
+    sections = []
+    for category, rows in categories.items():
+        sections.append({
+            "title": category,
+            "rows": rows[:10]  # Limit to 10 items per category
+        })
+        if len(sections) == 10:  # WhatsApp limit
+            break
 
     data = {
         "messaging_product": "whatsapp",
@@ -143,19 +157,14 @@ def send_default_menu(recipient):
             "body": {"text": "רכב זה לא נמצא, אנא בחר רכב:"},
             "action": {
                 "button": "בחר רכב",
-                "sections": [
-                    {
-                        "title": "רכבים זמינים",
-                        "rows": options[:10]  # Limit to 10 (WhatsApp restriction)
-                    }
-                ]
+                "sections": sections
             }
         }
     }
 
     response = requests.post(url, headers=headers, json=data)
     print("Default Menu Sent:", response.json())  # Debugging log
-
+    
 def get_car_code(car_number):
     """Fetches car code from Google Sheets based on the provided car number (4th column)"""
     records = cars_sheet.get_all_values()  # Fetch all rows as raw values (not dictionary)
