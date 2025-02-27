@@ -92,17 +92,6 @@ def receive_message():
                             else:
                                 send_message(sender, "לא נמצא קוד לרכב זה.")
 
-                    elif "button_reply" in msg["interactive"]:
-                        selection = msg["interactive"]["button_reply"]["id"]
-
-                        if selection.startswith("get_code_"):
-                            car_number = selection.replace("get_code_", "")
-                            car_code = get_car_code(car_number)
-                            if car_code:
-                                send_message(sender, car_code)
-                            else:
-                                send_message(sender, "לא נמצא קוד לרכב זה.")
-
                         elif selection.startswith("get_insurance_"):
                             car_number = selection.replace("get_insurance_", "")
                             send_insurance_file(sender, car_number)
