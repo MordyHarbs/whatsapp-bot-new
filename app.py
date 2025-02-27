@@ -256,13 +256,34 @@ def send_insurance_file(recipient, car_number):
         "Content-Type": "application/json"
     }
 
-    # Dropbox file path (adjust if needed)
-    dropbox_path = f"/מסמכים שונים/אא רשיונות וביטוחים/ביטוחים/2024-2025/{car_number}.pdf"
+    dropbox_folder = "/מסמכים שונים/אא רשיונות וביטוחים/ביטוחים/2024-2025/"
 
     try:
+        print(f"🔍 Searching for insurance file for car: {car_number} in {dropbox_folder}")
+
+        # List all files in the insurance folder
+        result = dbx.files_list_folder(dropbox_folder)
+        all_files = [entry.name for entry in result.entries]
+        print(f"📂 Files found in folder: {all_files}")
+
+        # Find a file that starts with the car number
+        matching_files = [entry.name for entry in result.entries if entry.name.startswith(car_number)]
+        print(f"✅ Matching files: {matching_files}")
+
+        if not matching_files:
+            print(f"⚠️ No file found for {car_number}")
+            send_message(recipient, "⚠️ לא נמצא קובץ ביטוח לרכב זה.")
+            return
+        
+        # Take the first matching file
+        file_name = matching_files[0]
+        dropbox_path = dropbox_folder + file_name
+        print(f"📄 Sending file: {file_name} (Dropbox path: {dropbox_path})")
+
         # Get shared link for the file
         shared_link_metadata = dbx.sharing_create_shared_link_with_settings(dropbox_path)
         file_url = shared_link_metadata.url.replace("?dl=0", "?dl=1")  # Force direct download
+        print(f"🔗 Dropbox file URL: {file_url}")
 
         data = {
             "messaging_product": "whatsapp",
@@ -270,17 +291,17 @@ def send_insurance_file(recipient, car_number):
             "type": "document",
             "document": {
                 "link": file_url,
-                "filename": f"{car_number}.pdf"
+                "filename": file_name
             }
         }
 
         response = requests.post(url, headers=headers, json=data)
-        print("Insurance File Sent:", response.json())
+        print(f"📨 Insurance File Sent: {response.json()}")
 
     except dropbox.exceptions.ApiError as e:
-        print("Error fetching file from Dropbox:", e)
-        send_message(recipient, "⚠️ לא נמצא קובץ ביטוח לרכב זה.")
-
+        print(f"❌ Error fetching file from Dropbox: {e}")
+        send_message(recipient, "⚠️ שגיאה בגישה לקובץ הביטוח.")
+        
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
