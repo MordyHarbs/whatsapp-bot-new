@@ -95,6 +95,18 @@ def receive_message():
                     elif "button_reply" in msg["interactive"]:
                         selection = msg["interactive"]["button_reply"]["id"]
 
+                        if selection.startswith("get_code_"):
+                            car_number = selection.replace("get_code_", "")
+                            car_code = get_car_code(car_number)
+                            if car_code:
+                                send_message(sender, car_code)
+                            else:
+                                send_message(sender, "לא נמצא קוד לרכב זה.")
+
+                        elif selection.startswith("get_insurance_"):
+                            car_number = selection.replace("get_insurance_", "")
+                            send_insurance_file(sender, car_number)
+
     return jsonify({"status": "received"}), 200
 
 def send_category_menu(recipient):
@@ -193,7 +205,7 @@ def send_car_options_menu(recipient, car_number, car_model):
         "type": "interactive",
         "interactive": {
             "type": "button",
-            "body": {"text": f"נמצא רכב: {car_model}\nבחר אפשרות:"},
+            "body": {"text": f"*נמצא רכב:* {car_model}\nבחר אפשרות:"},
             "action": {
                 "buttons": [
                     {"type": "reply", "reply": {"id": f"get_code_{car_number}", "title": "קוד לרכב"}},
@@ -249,6 +261,7 @@ DROPBOX_ACCESS_TOKEN = os.getenv("DROPBOX_ACCESS_TOKEN")
 dbx = dropbox.Dropbox(DROPBOX_ACCESS_TOKEN)
 
 def send_insurance_file(recipient, car_number):
+    print(f"🚀 send_insurance_file() called for car: {car_number}")
     """Fetches the insurance file from Dropbox and sends it via WhatsApp."""
     url = f"https://graph.facebook.com/v17.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
     headers = {
@@ -301,7 +314,7 @@ def send_insurance_file(recipient, car_number):
     except dropbox.exceptions.ApiError as e:
         print(f"❌ Error fetching file from Dropbox: {e}")
         send_message(recipient, "⚠️ שגיאה בגישה לקובץ הביטוח.")
-        
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
