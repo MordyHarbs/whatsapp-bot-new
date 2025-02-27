@@ -199,7 +199,6 @@ def send_car_options_menu(recipient, car_number, car_model):
                 "buttons": [
                     {"type": "reply", "reply": {"id": f"get_code_{car_number}", "title": "קוד לרכב"}},
                     {"type": "reply", "reply": {"id": f"get_insurance_{car_number}", "title": "ביטוח לרכב"}},
-                    {"type": "reply", "reply": {"id": f"get_registration_{car_number}", "title": "קוד לרכב"}}                    
                 ]
             }
         }
