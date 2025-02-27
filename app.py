@@ -20,7 +20,7 @@ cars_sheet = client.open_by_key(SHEET_ID).worksheet("cars")
 
 # WhatsApp API Details
 WHATSAPP_PHONE_NUMBER_ID = "525298894008965"
-WHATSAPP_ACCESS_TOKEN = "EAASmeEcmWYcBOZCKiFHxWEZAqcLQZCFtW66SrxFelBTcVxmoQzuL7rq6gZCnAy2LxrLSvRIq5GlkAZBdhHF4ZBQMNpUXZCN9QMDLZBVrkCfFGjSZBzYY8VyndrtyplkgnH0ri42SJ1LMKR4tJ2B17qMbE7oz4Pe0dLMDOs44qKugIURtQ2OZAT2ae349Oa0GjAKZA48VtjsT5Q3l1eZByJG3qbY6qzZBkpIs3gl5ck6Mr16MImd3xcrekvNEZD"
+WHATSAPP_ACCESS_TOKEN = "EAASmeEcmWYcBO1m1hdavMebTNVx5GxIgSNefGqFGtjSYZC4rACrhKuZA26nuXqxf9XXWvbtQLHxYogZBDVDbgZCrlo4Kp64hW2p0dbdCdJmaERjJ7knBShNAk6DgPr2ogP1BHoP88R7uDv4wzMCkOEq2o83GK9zdUtLEG9XAntn5dp2lGFn1iva0ZC9ZC2PfNpegFoWIVLMO6KZBnvZCPmHk0oXs0YKVZCSmF2BrLWSPpFJdM9ya67UIx"
 VERIFY_TOKEN = "my_custom_token"
 
 # Track user selections
@@ -198,7 +198,8 @@ def send_car_options_menu(recipient, car_number, car_model):
             "action": {
                 "buttons": [
                     {"type": "reply", "reply": {"id": f"get_code_{car_number}", "title": "קוד לרכב"}},
-                    {"type": "reply", "reply": {"id": f"get_insurance_{car_number}", "title": "ביטוח לרכב"}}
+                    {"type": "reply", "reply": {"id": f"get_insurance_{car_number}", "title": "ביטוח לרכב"}},
+                    {"type": "reply", "reply": {"id": f"get_registration_{car_number}", "title": "קוד לרכב"}}                    
                 ]
             }
         }
