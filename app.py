@@ -4,6 +4,7 @@ import requests
 import gspread
 from google.oauth2.service_account import Credentials
 import json
+import dropbox
 
 app = Flask(__name__)
 
@@ -19,7 +20,7 @@ cars_sheet = client.open_by_key(SHEET_ID).worksheet("cars")
 
 # WhatsApp API Details
 WHATSAPP_PHONE_NUMBER_ID = "525298894008965"
-WHATSAPP_ACCESS_TOKEN = "EAASmeEcmWYcBO4mBbFeiJ7d0a5CrFFS2s58DwrkcVF0IxlAyAfjYfoBDgHfbZAQTPARJZCuvydE9Kzs2xBh7ia8ZBDa7YgkfTlbqBenVcXKmpZBrkxDmMkKPj8t2rDa6LSDcJQyCw70KgoxBpDE5HyRjMzgHlxeNnZC5xYekh4yRcCcvpZCtcQYeMDH7VH26Ljzz9XZA1pYQbsTlrsVBaf08DyTowRnVvAvAOt2KSgkuLJ3tTCkBzMZD"
+WHATSAPP_ACCESS_TOKEN = "EAASmeEcmWYcBO5M9osGBwZAPRDV7i1nTLNW4NGDnuZCP6OEGfSG7KHrGW7kuSyKVNRZBc2uMidfzidGSdARqNiyulJEAxydhW1VBE52xCISTjXiphcB9IwbQqIVjdjLBpHvO8UF0TdSaFg2kvm5PFQOHAzGUIJlsxWw3oZByKak0piSxrjqhvtZAFzWsxe1pysWAbTV9FOJOJTVSZBjaRaj8J8QXDvYD0RDriFae8gYEsZCkQ7x82e2"
 VERIFY_TOKEN = "my_custom_token"
 
 # Track user selections
@@ -36,6 +37,7 @@ def verify():
     return "Verification failed", 403
 
 @app.route('/webhook', methods=['POST'])
+
 def receive_message():
     """Handles incoming messages from WhatsApp."""
     data = request.json
@@ -89,6 +91,9 @@ def receive_message():
                                 send_message(sender, car_code)
                             else:
                                 send_message(sender, "לא נמצא קוד לרכב זה.")
+
+                    elif "button_reply" in msg["interactive"]:
+                        selection = msg["interactive"]["button_reply"]["id"]
 
     return jsonify({"status": "received"}), 200
 
@@ -192,7 +197,7 @@ def send_car_options_menu(recipient, car_number, car_model):
             "action": {
                 "buttons": [
                     {"type": "reply", "reply": {"id": f"get_code_{car_number}", "title": "קוד לרכב"}},
-                    {"type": "reply", "reply": {"id": "option_2", "title": "אפשרות 2"}}
+                    {"type": "reply", "reply": {"id": f"get_insurance_{car_number}", "title": "ביטוח לרכב"}}
                 ]
             }
         }
@@ -200,7 +205,7 @@ def send_car_options_menu(recipient, car_number, car_model):
 
     response = requests.post(url, headers=headers, json=data)
     print("Car Options Menu Sent:", response.json())
-    
+
 def send_message(recipient, text):
     """Sends a plain text message to the recipient."""
     url = f"https://graph.facebook.com/v17.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
@@ -237,7 +242,45 @@ def get_car_code(car_number):
                 return f"*הקוד הוא:* {row[6].strip()}"  # Formatting the response with bold "הקוד הוא"
 
     return None  # Return None if not found
-    
+
+
+# Initialize Dropbox Client
+DROPBOX_ACCESS_TOKEN = os.getenv("DROPBOX_ACCESS_TOKEN")
+dbx = dropbox.Dropbox(DROPBOX_ACCESS_TOKEN)
+
+def send_insurance_file(recipient, car_number):
+    """Fetches the insurance file from Dropbox and sends it via WhatsApp."""
+    url = f"https://graph.facebook.com/v17.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
+    headers = {
+        "Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}",
+        "Content-Type": "application/json"
+    }
+
+    # Dropbox file path (adjust if needed)
+    dropbox_path = f"/מסמכים שונים/אא רשיונות וביטוחים/ביטוחים/2024-2025/{car_number}.pdf"
+
+    try:
+        # Get shared link for the file
+        shared_link_metadata = dbx.sharing_create_shared_link_with_settings(dropbox_path)
+        file_url = shared_link_metadata.url.replace("?dl=0", "?dl=1")  # Force direct download
+
+        data = {
+            "messaging_product": "whatsapp",
+            "to": recipient,
+            "type": "document",
+            "document": {
+                "link": file_url,
+                "filename": f"{car_number}.pdf"
+            }
+        }
+
+        response = requests.post(url, headers=headers, json=data)
+        print("Insurance File Sent:", response.json())
+
+    except dropbox.exceptions.ApiError as e:
+        print("Error fetching file from Dropbox:", e)
+        send_message(recipient, "⚠️ לא נמצא קובץ ביטוח לרכב זה.")
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
