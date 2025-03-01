@@ -258,6 +258,7 @@ def send_insurance_file(recipient, car_number):
         "Content-Type": "application/json"
     }
 
+    # Corrected Dropbox path
     dropbox_folder = "/Apps/whatsapp_bot/Insurance"
 
     try:
@@ -279,7 +280,7 @@ def send_insurance_file(recipient, car_number):
         
         # Take the first matching file
         file_name = matching_files[0]
-        dropbox_path = dropbox_folder + file_name
+        dropbox_path = f"{dropbox_folder}/{file_name}"  # Fixed path concatenation
         print(f"📄 Sending file: {file_name} (Dropbox path: {dropbox_path})")
 
         # Get shared link for the file
@@ -303,7 +304,7 @@ def send_insurance_file(recipient, car_number):
     except dropbox.exceptions.ApiError as e:
         print(f"❌ Error fetching file from Dropbox: {e}")
         send_message(recipient, "⚠️ שגיאה בגישה לקובץ הביטוח.")
-
+        
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
