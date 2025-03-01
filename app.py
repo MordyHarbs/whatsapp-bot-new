@@ -258,7 +258,6 @@ def send_insurance_file(recipient, car_number):
         "Content-Type": "application/json"
     }
 
-    # Corrected Dropbox path
     dropbox_folder = "/Apps/whatsapp_bot/Insurance"
 
     try:
@@ -266,10 +265,6 @@ def send_insurance_file(recipient, car_number):
 
         # List all files in the insurance folder
         result = dbx.files_list_folder(dropbox_folder)
-        all_files = [entry.name for entry in result.entries]
-        print(f"📂 Files found in folder: {all_files}")
-
-        # Find a file that starts with the car number
         matching_files = [entry.name for entry in result.entries if entry.name.startswith(car_number)]
         print(f"✅ Matching files: {matching_files}")
 
@@ -277,15 +272,29 @@ def send_insurance_file(recipient, car_number):
             print(f"⚠️ No file found for {car_number}")
             send_message(recipient, "⚠️ לא נמצא קובץ ביטוח לרכב זה.")
             return
-        
+
         # Take the first matching file
         file_name = matching_files[0]
-        dropbox_path = f"{dropbox_folder}/{file_name}"  # Fixed path concatenation
+        dropbox_path = f"{dropbox_folder}/{file_name}"
         print(f"📄 Sending file: {file_name} (Dropbox path: {dropbox_path})")
 
-        # Get shared link for the file
-        shared_link_metadata = dbx.sharing_create_shared_link_with_settings(dropbox_path)
-        file_url = shared_link_metadata.url.replace("?dl=0", "?dl=1")  # Force direct download
+        # Try to get or create a shared link
+        try:
+            shared_link_metadata = dbx.sharing_create_shared_link_with_settings(dropbox_path)
+            file_url = shared_link_metadata.url.replace("?dl=0", "?dl=1")  # Force direct download
+        except dropbox.exceptions.ApiError as e:
+            if isinstance(e.error, dropbox.sharing.CreateSharedLinkWithSettingsError) and \
+                    e.error.get_path().is_shared_link_already_exists():
+                print("🔗 Shared link already exists. Retrieving existing link.")
+                # Fetch existing shared links
+                existing_links = dbx.sharing_list_shared_links(dropbox_path).links
+                if existing_links:
+                    file_url = existing_links[0].url.replace("?dl=0", "?dl=1")  # Force direct download
+                else:
+                    raise e  # Re-raise if no links exist (shouldn't happen)
+            else:
+                raise e  # Re-raise unexpected errors
+
         print(f"🔗 Dropbox file URL: {file_url}")
 
         data = {
@@ -304,7 +313,7 @@ def send_insurance_file(recipient, car_number):
     except dropbox.exceptions.ApiError as e:
         print(f"❌ Error fetching file from Dropbox: {e}")
         send_message(recipient, "⚠️ שגיאה בגישה לקובץ הביטוח.")
-        
+                
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
