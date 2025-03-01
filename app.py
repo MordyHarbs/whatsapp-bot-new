@@ -20,7 +20,7 @@ cars_sheet = client.open_by_key(SHEET_ID).worksheet("cars")
 
 # WhatsApp API Details
 WHATSAPP_PHONE_NUMBER_ID = "525298894008965"
-WHATSAPP_ACCESS_TOKEN = "EAASmeEcmWYcBO1m1hdavMebTNVx5GxIgSNefGqFGtjSYZC4rACrhKuZA26nuXqxf9XXWvbtQLHxYogZBDVDbgZCrlo4Kp64hW2p0dbdCdJmaERjJ7knBShNAk6DgPr2ogP1BHoP88R7uDv4wzMCkOEq2o83GK9zdUtLEG9XAntn5dp2lGFn1iva0ZC9ZC2PfNpegFoWIVLMO6KZBnvZCPmHk0oXs0YKVZCSmF2BrLWSPpFJdM9ya67UIx"
+WHATSAPP_ACCESS_TOKEN = "EAASmeEcmWYcBO5ALJVFwaY1MZCtrMqZCZADGsk70C52mKWKklLcmC4ds3hx5HQPZClWEtmwH9Yy04q0LQrtxJwvLAHmAFIhlFaKj9dVxZCprJXqa5Nu2HZBymBbXZCOZAbL7BLiYoD6chSezTUsBtv1636nZAyw2SEFUTUzWZBMR8LpTMvq6N8rRCy4GhZCUYAvEtfigJY3Ta1Ip0gryXUS8UIV3N0Doi5TR7y6NDKidO0Kk0kTXlLtJwWjxAZDZD"
 VERIFY_TOKEN = "my_custom_token"
 
 # Track user selections
@@ -258,7 +258,7 @@ def send_insurance_file(recipient, car_number):
         "Content-Type": "application/json"
     }
 
-    dropbox_folder = "/מסמכים שונים/אא רשיונות וביטוחים/ביטוחים/2024-2025/"
+    dropbox_folder = "/Apps/whatsapp_bot/Insurance"
 
     try:
         print(f"🔍 Searching for insurance file for car: {car_number} in {dropbox_folder}")
