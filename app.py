@@ -254,8 +254,7 @@ def send_insurance_file(recipient, car_number):
     """Fetches the insurance file from Dropbox and sends it via WhatsApp."""
     url = f"https://graph.facebook.com/v17.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
     headers = {
-        "Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}",
-        "Content-Type": "application/json"
+        "Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}"
     }
 
     dropbox_folder = "/Apps/whatsapp_bot/Insurance"
@@ -290,20 +289,18 @@ def send_insurance_file(recipient, car_number):
             "messaging_product": "whatsapp",
             "to": recipient,
             "type": "document",
-            "document": {
-                "filename": file_name,
-                "mime_type": "application/pdf"  # Change mime type if your files are not PDF
-            }
+            "filename": file_name,
+            "mime_type": "application/pdf"  # Change mime type if your files are not PDF
         }
 
         # Send the file to WhatsApp API
-        response = requests.post(url, headers=headers, files=files, json=data)
+        response = requests.post(url, headers=headers, files=files, data=data)
         print(f"📨 Insurance File Sent: {response.json()}")
 
     except dropbox.exceptions.ApiError as e:
         print(f"❌ Error fetching file from Dropbox: {e}")
         send_message(recipient, "⚠️ שגיאה בגישה לקובץ הביטוח.")
-                
+                        
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
