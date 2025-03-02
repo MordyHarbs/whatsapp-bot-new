@@ -56,12 +56,12 @@ def receive_message():
                     car_number = msg["text"]["body"].strip()
                     car_info = get_car_info(car_number)
 
-                    if car_info and len(car_info) == 3:
+                    if car_info:
                         car_number, car_model, car_code = car_info
-                        send_car_options_menu(sender, car_number, car_model)  # Send button menu
+                        send_car_options_menu(sender, car_number, car_model)
                     else:
                         send_category_menu(sender)
-
+                        
                 elif "interactive" in msg:
                     if "list_reply" in msg["interactive"]:
                         selected_id = msg["interactive"]["list_reply"]["id"]
@@ -231,16 +231,21 @@ def get_car_info(query):
     for row in records[1:]:
         if len(row) >= 4 and row[3].strip() == query:
             # Return: car number, car model, car code
-            return row[3].strip(), row[1].strip(), row[6].strip() if len(row) >= 7 else None
+            if len(row) >= 7:
+                return row[3].strip(), row[1].strip(), row[6].strip()
+            else:
+                return None  # Return None if data is incomplete
 
     # If not found by number, search by car model (Column B)
     for row in records[1:]:
         if len(row) >= 2 and row[1].strip().lower() == query.lower():
-            # Return the same result as if the car number was sent
-            return row[3].strip(), row[1].strip(), row[6].strip() if len(row) >= 7 else None
+            if len(row) >= 7:
+                return row[3].strip(), row[1].strip(), row[6].strip()
+            else:
+                return None  # Return None if data is incomplete
 
-    # If not found, return None values
-    return None, None, None  # Ensure 3 values are always returned
+    # If not found, return None explicitly
+    return None
     
 
 def get_car_code(car_number):
