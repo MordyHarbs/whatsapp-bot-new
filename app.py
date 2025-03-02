@@ -230,8 +230,7 @@ def get_car_info(query):
     # Search by car number (Column D)
     for row in records[1:]:
         if len(row) >= 4 and row[3].strip() == query:
-            if len(row) >= 7 and all(row[3].strip(), row[1].strip(), row[6].strip()):
-                # Return: car number, car model, car code if all are not None
+            if len(row) >= 7 and all([row[3].strip(), row[1].strip(), row[6].strip()]):                # Return: car number, car model, car code if all are not None
                 return row[3].strip(), row[1].strip(), row[6].strip()
             else:
                 return None  # Return None if data is incomplete
@@ -239,7 +238,7 @@ def get_car_info(query):
     # If not found by number, search by car model (Column B)
     for row in records[1:]:
         if len(row) >= 2 and row[1].strip().lower() == query.lower():
-            if len(row) >= 7 and all(row[3].strip(), row[1].strip(), row[6].strip()):
+            if len(row) >= 7 and all([row[3].strip(), row[1].strip(), row[6].strip()]):
                 # Return: car number, car model, car code if all are not None
                 return row[3].strip(), row[1].strip(), row[6].strip()
             else:
