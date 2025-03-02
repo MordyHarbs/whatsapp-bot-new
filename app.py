@@ -278,36 +278,26 @@ def send_insurance_file(recipient, car_number):
         dropbox_path = f"{dropbox_folder}/{file_name}"
         print(f"📄 Sending file: {file_name} (Dropbox path: {dropbox_path})")
 
-        # Try to get or create a shared link
-        try:
-            shared_link_metadata = dbx.sharing_create_shared_link_with_settings(dropbox_path)
-            file_url = shared_link_metadata.url.replace("?dl=0", "?dl=1")  # Force direct download
-        except dropbox.exceptions.ApiError as e:
-            if isinstance(e.error, dropbox.sharing.CreateSharedLinkWithSettingsError) and \
-                    e.error.get_path().is_shared_link_already_exists():
-                print("🔗 Shared link already exists. Retrieving existing link.")
-                # Fetch existing shared links
-                existing_links = dbx.sharing_list_shared_links(dropbox_path).links
-                if existing_links:
-                    file_url = existing_links[0].url.replace("?dl=0", "?dl=1")  # Force direct download
-                else:
-                    raise e  # Re-raise if no links exist (shouldn't happen)
-            else:
-                raise e  # Re-raise unexpected errors
+        # Download the file from Dropbox
+        metadata, file_content = dbx.files_download(dropbox_path)
 
-        print(f"🔗 Dropbox file URL: {file_url}")
+        # Upload the file to WhatsApp
+        files = {
+            'file': (file_name, file_content.content)
+        }
 
         data = {
             "messaging_product": "whatsapp",
             "to": recipient,
             "type": "document",
             "document": {
-                "link": file_url,
-                "filename": file_name
+                "filename": file_name,
+                "mime_type": "application/pdf"  # Change mime type if your files are not PDF
             }
         }
 
-        response = requests.post(url, headers=headers, json=data)
+        # Send the file to WhatsApp API
+        response = requests.post(url, headers=headers, files=files, json=data)
         print(f"📨 Insurance File Sent: {response.json()}")
 
     except dropbox.exceptions.ApiError as e:
