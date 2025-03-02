@@ -294,9 +294,12 @@ def send_insurance_file(recipient, car_number):
 
         # Upload the file to WhatsApp as media
         files = {
-            'file': (file_name, file_content.content, 'application/pdf')  # Change MIME type if necessary
+            'file': (file_name, file_content.content, 'application/pdf')
         }
-        response = requests.post(url, headers=headers, files=files)
+        data = {
+            "messaging_product": "whatsapp"  # Add this line to fix the error
+        }
+        response = requests.post(url, headers=headers, files=files, data=data)
         media_response = response.json()
         print(f"📨 Media Upload Response: {media_response}")
 
