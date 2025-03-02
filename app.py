@@ -194,7 +194,7 @@ def send_car_options_menu(recipient, car_number, car_model):
         "type": "interactive",
         "interactive": {
             "type": "button",
-            "body": {"text": f"*נמצא רכב:* {car_model}\nבחר אפשרות"},
+            "body": {"text": f"*נמצא רכב:* {car_model}\n*מספר רכב:* {car_number}\nבחר אפשרות"},
             "action": {
                 "buttons": [
                     {"type": "reply", "reply": {"id": f"get_code_{car_number}", "title": "קוד לרכב"}},
