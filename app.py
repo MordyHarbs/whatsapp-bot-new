@@ -223,12 +223,20 @@ def send_message(recipient, text):
     print("Message Sent:", response.json())
 
 
-def get_car_info(car_number):
-    """Fetches car model and code from Google Sheets."""
+def get_car_info(query):
+    """Fetches car model and code based on car number or name from Google Sheets."""
     records = cars_sheet.get_all_values()
+
+    # Search by car number (Column D)
     for row in records[1:]:
-        if len(row) >= 4 and row[3].strip() == car_number:
+        if len(row) >= 4 and row[3].strip() == query:
             return row[1].strip(), row[6].strip() if len(row) >= 7 else None
+
+    # If not found by number, search by car name (Column B)
+    for row in records[1:]:
+        if len(row) >= 2 and row[1].strip().lower() == query.lower():
+            return row[1].strip(), row[6].strip() if len(row) >= 7 else None
+
     return None
 
 def get_car_code(car_number):
