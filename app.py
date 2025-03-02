@@ -56,7 +56,7 @@ def receive_message():
                     car_number = msg["text"]["body"].strip()
                     car_info = get_car_info(car_number)
 
-                    if car_info:
+                    if car_info and all(car_info):
                         car_number, car_model, car_code = car_info
                         send_car_options_menu(sender, car_number, car_model)
                     else:
@@ -230,8 +230,8 @@ def get_car_info(query):
     # Search by car number (Column D)
     for row in records[1:]:
         if len(row) >= 4 and row[3].strip() == query:
-            # Return: car number, car model, car code
-            if len(row) >= 7:
+            if len(row) >= 7 and all(row[3].strip(), row[1].strip(), row[6].strip()):
+                # Return: car number, car model, car code if all are not None
                 return row[3].strip(), row[1].strip(), row[6].strip()
             else:
                 return None  # Return None if data is incomplete
@@ -239,7 +239,8 @@ def get_car_info(query):
     # If not found by number, search by car model (Column B)
     for row in records[1:]:
         if len(row) >= 2 and row[1].strip().lower() == query.lower():
-            if len(row) >= 7:
+            if len(row) >= 7 and all(row[3].strip(), row[1].strip(), row[6].strip()):
+                # Return: car number, car model, car code if all are not None
                 return row[3].strip(), row[1].strip(), row[6].strip()
             else:
                 return None  # Return None if data is incomplete
