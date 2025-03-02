@@ -57,7 +57,7 @@ def receive_message():
                     car_info = get_car_info(car_number)
 
                     if car_info:
-                        car_model, car_code = car_info
+                        car_model, car_number, car_code = car_info
                         send_car_options_menu(sender, car_number, car_model)  # Send button menu
                     else:
                         send_category_menu(sender)
@@ -260,7 +260,7 @@ dbx = dropbox.Dropbox(DROPBOX_ACCESS_TOKEN)
 def send_insurance_file(recipient, car_number):
     print(f"🚀 send_insurance_file() called for car: {car_number}")
     """Fetches the insurance file from Dropbox and sends it via WhatsApp."""
-    url = f"https://graph.facebook.com/v17.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
+    url = f"https://graph.facebook.com/v17.0/{WHATSAPP_PHONE_NUMBER_ID}/media"
     headers = {
         "Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}"
     }
@@ -283,31 +283,52 @@ def send_insurance_file(recipient, car_number):
         # Take the first matching file
         file_name = matching_files[0]
         dropbox_path = f"{dropbox_folder}/{file_name}"
-        print(f"📄 Sending file: {file_name} (Dropbox path: {dropbox_path})")
+        print(f"📄 Found file: {file_name} (Dropbox path: {dropbox_path})")
 
         # Download the file from Dropbox
         metadata, file_content = dbx.files_download(dropbox_path)
 
-        # Upload the file to WhatsApp
+        # Upload the file to WhatsApp as media
         files = {
-            'file': (file_name, file_content.content)
+            'file': (file_name, file_content.content, 'application/pdf')  # Change MIME type if necessary
         }
+        response = requests.post(url, headers=headers, files=files)
+        media_response = response.json()
+        print(f"📨 Media Upload Response: {media_response}")
 
+        if "id" not in media_response:
+            print("❌ Error uploading file to WhatsApp.")
+            send_message(recipient, "⚠️ שגיאה בהעלאת הקובץ לוואטסאפ.")
+            return
+
+        media_id = media_response["id"]
+
+        # Send the uploaded file as a document
+        message_url = f"https://graph.facebook.com/v17.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
+        message_headers = {
+            "Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}",
+            "Content-Type": "application/json"
+        }
         data = {
             "messaging_product": "whatsapp",
             "to": recipient,
             "type": "document",
-            "filename": file_name,
-            "mime_type": "application/pdf"  # Change mime type if your files are not PDF
+            "document": {
+                "id": media_id,
+                "filename": file_name
+            }
         }
 
-        # Send the file to WhatsApp API
-        response = requests.post(url, headers=headers, files=files, data=data)
-        print(f"📨 Insurance File Sent: {response.json()}")
+        # Send the document to WhatsApp API
+        send_response = requests.post(message_url, headers=message_headers, json=data)
+        print(f"📨 Insurance File Sent: {send_response.json()}")
 
     except dropbox.exceptions.ApiError as e:
         print(f"❌ Error fetching file from Dropbox: {e}")
         send_message(recipient, "⚠️ שגיאה בגישה לקובץ הביטוח.")
+    except Exception as e:
+        print(f"❌ Unexpected error: {e}")
+        send_message(recipient, "⚠️ אירעה שגיאה בלתי צפויה.")
                         
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
