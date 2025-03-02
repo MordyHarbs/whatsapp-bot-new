@@ -56,9 +56,9 @@ def receive_message():
                     car_number = msg["text"]["body"].strip()
                     car_info = get_car_info(car_number)
 
-                    if car_info:
-                        car_model, car_number, car_code = car_info
-                        send_car_options_menu(sender, car_number)  # Send button menu
+                    if car_info and len(car_info) == 3:
+                        car_number, car_model, car_code = car_info
+                        send_car_options_menu(sender, car_number, car_model)  # Send button menu
                     else:
                         send_category_menu(sender)
 
@@ -224,20 +224,24 @@ def send_message(recipient, text):
 
 
 def get_car_info(query):
-    """Fetches car model and code based on car number or name from Google Sheets."""
+    """Fetches car number, car model, and car code based on car number or name from Google Sheets."""
     records = cars_sheet.get_all_values()
 
     # Search by car number (Column D)
     for row in records[1:]:
         if len(row) >= 4 and row[3].strip() == query:
-            return row[1].strip(), row[6].strip() if len(row) >= 7 else None
+            # Return: car number, car model, car code
+            return row[3].strip(), row[1].strip(), row[6].strip() if len(row) >= 7 else None
 
-    # If not found by number, search by car name (Column B)
+    # If not found by number, search by car model (Column B)
     for row in records[1:]:
         if len(row) >= 2 and row[1].strip().lower() == query.lower():
-            return row[1].strip(), row[6].strip() if len(row) >= 7 else None
+            # Return the same result as if the car number was sent
+            return row[3].strip(), row[1].strip(), row[6].strip() if len(row) >= 7 else None
 
-    return None
+    # If not found, return None values
+    return None, None, None  # Ensure 3 values are always returned
+    
 
 def get_car_code(car_number):
     """Fetches the car code from Google Sheets."""
