@@ -20,7 +20,7 @@ cars_sheet = client.open_by_key(SHEET_ID).worksheet("cars")
 
 # WhatsApp API Details
 WHATSAPP_PHONE_NUMBER_ID = "525298894008965"
-WHATSAPP_ACCESS_TOKEN = "EAASmeEcmWYcBOxqXcYNBCGNJMMB1k3e6Fm5rOkKfFX2fx5xCnZBSYpBsJ7uwrx8md1ZChTtIKZA8kRD04euZCB8PbfZC8ovAuZBbPk3S6zZAL0vooppkN99TlwZB4VSd7tPk4BIoB28UuODWtJMz78Sf1ZBW7tStwcWFe1DXTfvusiZBhY2ZACmnXO803DHZCoIanzpKg9suw0EUNo8qb0nN9cdLREtoc5uXNNTjbZALSuCRveUMqhzfw7CCA"
+WHATSAPP_ACCESS_TOKEN = "EAASmeEcmWYcBOzynomMHaoWwPy2RcV6OC6tZAODB2w4skWxKdwOIdACl3A8LmbaWEkYZCAD2dBz8P99voZAE0IJp9CWCqwRCPCWNq9PZCwRY8ZCLCDZBRKQXdThb26F3QtRbvYs45WUGotvqBmbUlUk2nKlZCyUKoPofKtQle2vahgCxsnwo2H3YNnQxUJD6V4X0vnu5vVpjMeZABDpx0cIdSxVq4pCIvEsHLwG9cpE6xLRnyvIDN9MZD"
 VERIFY_TOKEN = "my_custom_token"
 
 # Track user selections
@@ -194,7 +194,7 @@ def send_car_options_menu(recipient, car_number, car_model):
         "type": "interactive",
         "interactive": {
             "type": "button",
-            "body": {"text": f"*נמצא רכב:* {car_model}\nבחר אפשרות:"},
+            "body": {"text": f"*נמצא רכב:* {car_model}\nבחר אפשרות"},
             "action": {
                 "buttons": [
                     {"type": "reply", "reply": {"id": f"get_code_{car_number}", "title": "קוד לרכב"}},
