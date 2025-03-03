@@ -76,7 +76,7 @@ def receive_message():
                             car_info = get_car_info(car_number)
 
                             if car_info:
-                                car_model, car_code = car_info
+                                car_number, car_model, car_code = car_info
                                 send_car_options_menu(sender, car_number)  # Send button menu
                             else:
                                 send_message(sender, "רכב זה לא נמצא, נא לנסות שוב")
