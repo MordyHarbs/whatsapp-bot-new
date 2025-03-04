@@ -95,7 +95,7 @@ def receive_message():
                         elif selection.startswith("get_insurance_"):
                             car_number = selection.replace("get_insurance_", "")
                             send_insurance_file(sender, car_number)
-                            
+
                         elif selection.startswith("get_registration_"):
                             car_number = selection.replace("get_registration_", "")
                             send_registration_file(sender, car_number)
@@ -203,7 +203,7 @@ def send_car_options_menu(recipient, car_number, car_model):
                 "buttons": [
                     {"type": "reply", "reply": {"id": f"get_code_{car_number}", "title": "קוד לרכב"}},
                     {"type": "reply", "reply": {"id": f"get_insurance_{car_number}", "title": "ביטוח לרכב"}},
-                    {"type": "reply", "reply": {"id": f"get_registration_{car_number}", "title": "רישיון לרכב"}}  # New Button
+                    {"type": "reply", "reply": {"id": f"get_registration_{car_number}", "title": "רישיון רכב"}}  # New Button
                 ]
             }
         }
