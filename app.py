@@ -95,6 +95,10 @@ def receive_message():
                         elif selection.startswith("get_insurance_"):
                             car_number = selection.replace("get_insurance_", "")
                             send_insurance_file(sender, car_number)
+                            
+                        elif selection.startswith("get_registration_"):
+                            car_number = selection.replace("get_registration_", "")
+                            send_registration_file(sender, car_number)
 
     return jsonify({"status": "received"}), 200
 
@@ -199,6 +203,7 @@ def send_car_options_menu(recipient, car_number, car_model):
                 "buttons": [
                     {"type": "reply", "reply": {"id": f"get_code_{car_number}", "title": "קוד לרכב"}},
                     {"type": "reply", "reply": {"id": f"get_insurance_{car_number}", "title": "ביטוח לרכב"}},
+                    {"type": "reply", "reply": {"id": f"get_registration_{car_number}", "title": "רישיון לרכב"}}  # New Button
                 ]
             }
         }
@@ -341,7 +346,82 @@ def send_insurance_file(recipient, car_number):
     except Exception as e:
         print(f"❌ Unexpected error: {e}")
         send_message(recipient, "⚠️ אירעה שגיאה בלתי צפויה.")
-                        
+
+def send_registration_file(recipient, car_number):
+    print(f"🚀 send_registration_file() called for car: {car_number}")
+    """Fetches the registration file from Dropbox and sends it via WhatsApp."""
+    url = f"https://graph.facebook.com/v17.0/{WHATSAPP_PHONE_NUMBER_ID}/media"
+    headers = {
+        "Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}"
+    }
+
+    dropbox_folder = "/Apps/whatsapp_bot/Registration"
+
+    try:
+        print(f"🔍 Searching for registration file for car: {car_number} in {dropbox_folder}")
+
+        # List all files in the registration folder
+        result = dbx.files_list_folder(dropbox_folder)
+        matching_files = [entry.name for entry in result.entries if entry.name.startswith(car_number)]
+        print(f"✅ Matching files: {matching_files}")
+
+        if not matching_files:
+            print(f"⚠️ No file found for {car_number}")
+            send_message(recipient, "⚠️ לא נמצא קובץ רישיון לרכב זה.")
+            return
+
+        # Take the first matching file
+        file_name = matching_files[0]
+        dropbox_path = f"{dropbox_folder}/{file_name}"
+        print(f"📄 Found file: {file_name} (Dropbox path: {dropbox_path})")
+
+        # Download the file from Dropbox
+        metadata, file_content = dbx.files_download(dropbox_path)
+
+        # Upload the file to WhatsApp as media
+        files = {
+            'file': (file_name, file_content.content, 'application/pdf')
+        }
+        data = {
+            "messaging_product": "whatsapp"
+        }
+        response = requests.post(url, headers=headers, files=files, data=data)
+        media_response = response.json()
+        print(f"📨 Media Upload Response: {media_response}")
+
+        if "id" not in media_response:
+            print("❌ Error uploading file to WhatsApp.")
+            send_message(recipient, "⚠️ שגיאה בהעלאת הקובץ לוואטסאפ.")
+            return
+
+        media_id = media_response["id"]
+
+        # Send the uploaded file as a document
+        message_url = f"https://graph.facebook.com/v17.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
+        message_headers = {
+            "Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "messaging_product": "whatsapp",
+            "to": recipient,
+            "type": "document",
+            "document": {
+                "id": media_id,
+                "filename": file_name
+            }
+        }
+
+        send_response = requests.post(message_url, headers=message_headers, json=data)
+        print(f"📨 Registration File Sent: {send_response.json()}")
+
+    except dropbox.exceptions.ApiError as e:
+        print(f"❌ Error fetching file from Dropbox: {e}")
+        send_message(recipient, "⚠️ שגיאה בגישה לקובץ הרישיון.")
+    except Exception as e:
+        print(f"❌ Unexpected error: {e}")
+        send_message(recipient, "⚠️ אירעה שגיאה בלתי צפויה.")
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
